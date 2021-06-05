@@ -1,0 +1,55 @@
+import pandas as pd
+import env
+import os
+# must have env.py saved in same directory as script. ensure the env.py is in your .gitignore
+def get_connection(db_name, username = env.username, host=env.host, password=env.password):
+    '''
+    This function makes a connection with and pulls from the CodeUp database. It 
+    takes the database name as its argument, pulls other login info from env.py.
+    Make sure you save this as a variable or it will print out your sensitive user
+    info as plain text. 
+    '''
+    return f'mysql+pymysql://{username}:{password}@{host}/{db_name}'
+    
+def get_telco_db(db_name, username = env.username, password = env.password, host = env.host):
+    filename = 'telco.csv'
+    if os.path.isfile(filename):
+        telco_df = pd.read_csv(filename, index_col=0)
+        return telco_df
+    else:
+        telco_df = pd.read_sql('''SELECT * FROM customers 
+                          JOIN internet_service_types USING(internet_service_type_id)
+                          JOIN contract_types USING(contract_type_id)
+                          JOIN payment_types USING (payment_type_id);''',
+                        get_connection('telco_churn'))
+        telco_df.to_csv(filename)
+        return telco_df
+    
+def get_zillow_db(db_name = 'zillow', username = env.username, password = env.password, host = env.host):
+    '''
+    Imports single residential family properties from the zillow database. columns are bedroom/bathroom counts,
+    square footage, tax value, year it was built, tax, and fips for the year 2017'''
+    filename = 'zillow.csv'
+    if os.path.isfile(filename):
+        zillow_df = pd.read_csv(filename, index_col=0)
+        return zillow_df
+    else:
+        zillow_df = pd.read_sql('''SELECT bedroomcnt, bathroomcnt, calculatedfinishedsquarefeet, 
+                                          taxvaluedollarcnt, yearbuilt, taxamount, fips 
+                                          FROM properties_2017
+                                          WHERE propertylandusetypeid = 261;''',
+                        get_connection('zillow'))
+        zillow_df.to_csv(filename)
+        return zillow_df
+    
+def get_iris_data():
+    ''' This function pulls the iris db into a dataframe, or caches it as a .csv if it hasnt been already.
+    '''
+    filename = 'iris.csv'
+    if os.path.isfile(filename):
+        iris_df = pd.read_csv(filename, index_col=0)
+        return iris_df
+    else:
+        iris_df = pd.read_sql('SELECT * FROM measurements JOIN species USING(species_id);', get_connection('iris_db'))
+        iris_df.to_csv(filename)
+        return iris_df
